@@ -1,0 +1,6 @@
+venv/
+.venv/
+.idea/
+.git/
+
+README.md

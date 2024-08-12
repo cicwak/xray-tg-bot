@@ -1,0 +1,56 @@
+version: "3.8"
+
+services:
+  db:
+    image: postgres:15
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=vpn-service-backend
+    ports:
+      - "127.0.0.1:5440:5432" # чек, на то, занят ли порт
+
+  redis:
+    image: redis:7
+    restart: always
+    volumes:
+      - redis_data:/data
+    ports:
+      - "127.0.0.1:6380:6379"
+    command: "redis-server --save 20 1 --loglevel warning"
+
+  bot:
+    build:
+      context: .
+      dockerfile: bot.Dockerfile
+    command: "python bot.py"
+    restart: unless-stopped
+    env_file:
+      - .env
+    volumes:
+      - .:/usr/src/app
+    depends_on:
+      - db
+      - redis
+
+  xray:
+    image: ghcr.io/mhsanaei/3x-ui:latest
+    container_name: xray
+    hostname: yourhostname
+    volumes:
+      - $PWD/xray/db/:/etc/x-ui/
+      - $PWD/xray/cert/:/root/cert/
+    environment:
+      XRAY_VMESS_AEAD_FORCED: "false"
+    ports:
+      - "127.0.0.1:26238:26238"
+      - "127.0.0.1:80:2053"
+    tty: true
+    restart: unless-stopped
+
+
+volumes:
+  postgres_data:
+  redis_data:
